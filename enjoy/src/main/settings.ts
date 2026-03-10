@@ -93,7 +93,13 @@ export default {
     });
 
     ipcMain.handle("app-settings-get-user", (_event) => {
-      return settings.getSync(AppSettingsKeyEnum.USER);
+      const stored = settings.getSync(AppSettingsKeyEnum.USER);
+      if (!stored && process.env.ENJOY_DEV_BYPASS === "1") {
+        const mock = { id: 99999999, name: "OfflineDev" };
+        settings.setSync(AppSettingsKeyEnum.USER, mock);
+        return mock;
+      }
+      return stored;
     });
 
     ipcMain.handle("app-settings-set-user", (_event, user) => {

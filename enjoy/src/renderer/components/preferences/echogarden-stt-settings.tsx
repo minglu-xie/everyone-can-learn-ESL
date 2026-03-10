@@ -24,6 +24,7 @@ import { WHISPER_MODELS } from "@/constants";
 
 const echogardenSttConfigSchema = z.object({
   engine: z.enum(["whisper", "whisper.cpp"]),
+  whisperServerUrl: z.string().optional(),
   whisper: z.object({
     model: z.string(),
     temperature: z.number(),
@@ -37,6 +38,7 @@ const echogardenSttConfigSchema = z.object({
     prompt: z.string(),
     enableGPU: z.boolean(),
   }),
+  maxSegmentLength: z.number().min(10).max(200).optional(),
 });
 
 export const EchogardenSttSettings = (props: {
@@ -56,6 +58,7 @@ export const EchogardenSttSettings = (props: {
     resolver: zodResolver(echogardenSttConfigSchema),
     values: {
       engine: echogardenSttConfig?.engine,
+      whisperServerUrl: echogardenSttConfig?.whisperServerUrl ?? "http://localhost:8000",
       whisper: {
         model: "tiny",
         temperature: 0.1,
@@ -71,20 +74,25 @@ export const EchogardenSttSettings = (props: {
         enableGPU: false,
         ...echogardenSttConfig?.whisperCpp,
       },
+      maxSegmentLength: echogardenSttConfig?.maxSegmentLength ?? 20,
     },
   });
 
   const onSubmit = async (data: z.infer<typeof echogardenSttConfigSchema>) => {
+    // The model dropdown is shared (whisper.model), sync it to the active engine
+    const selectedModel = data.whisper.model || "tiny";
     onSave({
       engine: data.engine || "whisper",
+      whisperServerUrl: data.whisperServerUrl,
       whisper: {
-        model: data.whisper.model || "tiny",
         ...data.whisper,
+        model: selectedModel,
       },
       whisperCpp: {
-        model: data.whisperCpp.model || "tiny",
         ...data.whisperCpp,
+        model: selectedModel,
       },
+      maxSegmentLength: data.maxSegmentLength,
     });
   };
 
@@ -127,6 +135,25 @@ export const EchogardenSttSettings = (props: {
                   {form.watch("engine") === "whisper"
                     ? t("whisperEngineDescription")
                     : t("whisperCppEngineDescription")}
+                </FormDescription>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="whisperServerUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Whisper Server URL</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="http://localhost:8000"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Optional. URL of a running faster-whisper server. If reachable, it is used instead of local whisper.cpp for better quality (VAD filters out intro music). Leave empty to always use whisper.cpp.
                 </FormDescription>
               </FormItem>
             )}
@@ -328,6 +355,29 @@ export const EchogardenSttSettings = (props: {
               />
             </>
           )}
+
+          <FormField
+            control={form.control}
+            name="maxSegmentLength"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("maxSegmentLength")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step={5}
+                    min={10}
+                    max={200}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 20)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {t("maxSegmentLengthDescription")}
+                </FormDescription>
+              </FormItem>
+            )}
+          />
         </div>
         <div className="flex items-center justify-end space-x-2">
           <Button size="sm" type="submit">

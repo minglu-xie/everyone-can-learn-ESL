@@ -34,41 +34,70 @@ export const useAiCommand = () => {
     word = word.trim();
     if (!word) return;
 
-    const lookup = await webApi.lookup({
-      word,
-      context,
-      sourceId,
-      sourceType,
-      nativeLanguage,
-    });
+    // Try backend lookup; fall back to local-only when not logged in
+    let lookup: any = null;
+    try {
+      lookup = await webApi.lookup({
+        word,
+        context,
+        sourceId,
+        sourceType,
+        nativeLanguage,
+      });
+    } catch (err) {
+      console.warn("webApi.lookup unavailable, using local-only mode:", err.message);
+      // Check local cache first
+      if (cacheKey && !force) {
+        const cached = await EnjoyApp.cacheObjects.get(cacheKey);
+        if (cached?.meaning) return cached;
+      }
+      lookup = { id: null, meaning: null, meaningOptions: [] };
+    }
 
     if (lookup.meaning && !force) {
       return lookup;
     }
 
-    const modelName =
+    const lookupModel =
       currentGptEngine.models.lookup || currentGptEngine.models.default;
 
-    const res = await lookupCommand(
-      {
-        word,
-        context,
-        meaningOptions: lookup.meaningOptions,
-        nativeLanguage,
-        learningLanguage,
-      },
-      {
-        key: currentGptEngine.key,
-        modelName,
-        baseUrl: currentGptEngine.baseUrl,
-      }
-    );
+    const callLookup = (model: string) =>
+      lookupCommand(
+        {
+          word,
+          context,
+          meaningOptions: lookup.meaningOptions,
+          nativeLanguage,
+          learningLanguage,
+        },
+        {
+          key: currentGptEngine.key,
+          modelName: model,
+          baseUrl: currentGptEngine.baseUrl,
+        }
+      );
 
-    webApi.updateLookup(lookup.id, {
-      meaning: res,
-      sourceId,
-      sourceType,
-    });
+    let res;
+    try {
+      res = await callLookup(lookupModel);
+    } catch (err) {
+      // If a custom lookup model fails (e.g. stale "4o-mini"), retry with default
+      if (lookupModel !== currentGptEngine.models.default) {
+        console.warn(`Lookup model "${lookupModel}" failed, retrying with default:`, err.message);
+        res = await callLookup(currentGptEngine.models.default);
+      } else {
+        throw err;
+      }
+    }
+
+    // Only sync back to backend if we have a real lookup record
+    if (lookup.id) {
+      webApi.updateLookup(lookup.id, {
+        meaning: res,
+        sourceId,
+        sourceType,
+      });
+    }
 
     const result = Object.assign(lookup, {
       meaning: res,

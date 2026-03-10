@@ -27,6 +27,83 @@ const logger = log.scope("use-transcribe.tsx");
 // some transcribed text may not have any punctuations
 const punctuationsPattern = /\w[.,!?](\s|$)/g;
 
+const DEFAULT_MAX_SEGMENT_LENGTH = 20;
+
+/**
+ * Split long timeline segments at sentence-ending punctuation.
+ * Timestamps are interpolated proportionally by character position.
+ */
+const splitLongSegments = (
+  entries: TimelineEntry[],
+  maxLength: number = DEFAULT_MAX_SEGMENT_LENGTH
+): TimelineEntry[] => {
+  const result: TimelineEntry[] = [];
+  for (const entry of entries) {
+    const text = entry.text?.trim();
+    if (!text || text.length <= maxLength) {
+      result.push(entry);
+      continue;
+    }
+    // Split at sentence-ending punctuation followed by space
+    const parts = text.split(/(?<=[.!?])\s+/);
+    if (parts.length <= 1) {
+      result.push(entry);
+      continue;
+    }
+    const totalLen = text.length;
+    const duration = entry.endTime - entry.startTime;
+    let charOffset = 0;
+    for (const part of parts) {
+      const ratio = part.length / totalLen;
+      const startTime = entry.startTime + (charOffset / totalLen) * duration;
+      const endTime = startTime + ratio * duration;
+      result.push({
+        type: "sentence" as TimelineEntryType,
+        text: part.trim(),
+        startTime,
+        endTime,
+        timeline: [],
+      });
+      charOffset += part.length + 1; // +1 for the space
+    }
+  }
+  return result;
+};
+
+/**
+ * Add a small time pad to each segment boundary so playback
+ * doesn't clip the first/last syllable.  Prevents overlaps by
+ * falling back to the midpoint between neighbours.
+ */
+const SEGMENT_PAD_S = 0.1; // 100 ms each side
+
+const padSegmentBoundaries = (
+  entries: TimelineEntry[]
+): TimelineEntry[] => {
+  return entries.map((entry, i) => {
+    const prev = entries[i - 1];
+    const next = entries[i + 1];
+
+    let start = entry.startTime - SEGMENT_PAD_S;
+    let end = entry.endTime + SEGMENT_PAD_S;
+
+    // Never go below zero
+    if (start < 0) start = 0;
+
+    // Don't overlap with the previous segment
+    if (prev && start < prev.endTime) {
+      start = (entry.startTime + prev.endTime) / 2;
+    }
+
+    // Don't overlap with the next segment
+    if (next && end > next.startTime) {
+      end = (entry.endTime + next.startTime) / 2;
+    }
+
+    return { ...entry, startTime: start, endTime: end };
+  });
+};
+
 export const useTranscribe = () => {
   const { EnjoyApp, user, webApi } = useContext(AppSettingsProviderContext);
   const { openai, echogardenSttConfig } = useContext(AISettingsProviderContext);
@@ -124,10 +201,13 @@ export const useTranscribe = () => {
         }
       );
 
-      const timeline = await EnjoyApp.echogarden.wordToSentenceTimeline(
+      const rawTimeline = await EnjoyApp.echogarden.wordToSentenceTimeline(
         wordTimeline,
         transcript,
         language.split("-")[0]
+      );
+      const timeline = padSegmentBoundaries(
+        splitLongSegments(rawTimeline, echogardenSttConfig?.maxSegmentLength)
       );
 
       return {
@@ -148,16 +228,19 @@ export const useTranscribe = () => {
         }
       );
 
-      const timeline: TimelineEntry[] = [];
+      const rawTimeline: TimelineEntry[] = [];
       alignmentResult.timeline.forEach((t: TimelineEntry) => {
         if (t.type === "sentence") {
-          timeline.push(t);
+          rawTimeline.push(t);
         } else {
           t.timeline.forEach((st) => {
-            timeline.push(st);
+            rawTimeline.push(st);
           });
         }
       });
+      const timeline = padSegmentBoundaries(
+        splitLongSegments(rawTimeline, echogardenSttConfig?.maxSegmentLength)
+      );
 
       return {
         ...result,
@@ -235,6 +318,71 @@ export const useTranscribe = () => {
     }
   };
 
+  const transcribeByWhisperServer = async (
+    url: string,
+    options: { language: string }
+  ): Promise<{
+    engine: string;
+    model: string;
+    transcript: string;
+    segmentTimeline: TimelineEntry[];
+  }> => {
+    const serverUrl = echogardenSttConfig?.whisperServerUrl;
+    if (!serverUrl) {
+      throw new Error("No whisper server URL configured");
+    }
+
+    // Check if the server is ready
+    const statusRes = await fetch(`${serverUrl}/status`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    const statusData = await statusRes.json();
+    if (!statusData.ready) {
+      throw new Error("Whisper server model not ready yet");
+    }
+
+    logger.info(`Whisper server ready (model: ${statusData.model}), sending audio...`);
+
+    // Send audio to the server
+    const audioBlob = await (await fetch(url)).blob();
+    const formData = new FormData();
+    formData.append(
+      "audio",
+      new File([audioBlob], "audio.wav", { type: "audio/wav" })
+    );
+    formData.append("language", options.language.split("-")[0]);
+
+    const res = await fetch(`${serverUrl}/transcribe`, {
+      method: "POST",
+      body: formData,
+      signal: AbortSignal.timeout(5 * 60 * 1000), // 5 minute timeout
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Whisper server error ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
+
+    const segmentTimeline: TimelineEntry[] = (data.segments || []).map(
+      (seg: { index: number; startTime: number; endTime: number; text: string }) => ({
+        type: "segment" as TimelineEntryType,
+        text: seg.text,
+        startTime: seg.startTime,
+        endTime: seg.endTime,
+        timeline: [] as TimelineEntry[],
+      })
+    );
+
+    return {
+      engine: "faster-whisper",
+      model: data.model || statusData.model || "large-v3-turbo",
+      transcript: segmentTimeline.map((s) => s.text).join(" "),
+      segmentTimeline,
+    };
+  };
+
   const transcribeByLocal = async (
     url: string,
     options: { language: string }
@@ -246,10 +394,31 @@ export const useTranscribe = () => {
   }> => {
     let { language } = options || {};
     const languageCode = language.split("-")[0];
-    let model: string;
 
+    // --- Try faster-whisper server first ---
+    const serverUrl = echogardenSttConfig?.whisperServerUrl;
+    if (serverUrl && serverUrl.trim().length > 0) {
+      try {
+        logger.info(`Trying faster-whisper server at ${serverUrl}...`);
+        setOutput("Trying faster-whisper server...");
+        const result = await transcribeByWhisperServer(url, options);
+        setOutput("Faster-whisper transcribe done");
+        logger.info(
+          `Faster-whisper server succeeded: ${result.segmentTimeline.length} segments`
+        );
+        return result;
+      } catch (err) {
+        logger.warn(
+          `Faster-whisper server unavailable, falling back to whisper.cpp: ${err.message}`
+        );
+        setOutput("Server unavailable, falling back to whisper.cpp...");
+      }
+    }
+
+    // --- Fallback to echogarden whisper.cpp ---
+    let model: string;
     let res: RecognitionResult;
-    logger.info("Start transcribing from Whisper...");
+    logger.info("Start transcribing from Whisper (local)...");
     try {
       model =
         echogardenSttConfig[
@@ -259,6 +428,8 @@ export const useTranscribe = () => {
         ].model;
       res = await EnjoyApp.echogarden.recognize(url, {
         language: languageCode,
+        crop: true,
+        vad: { engine: "silero" as const },
         ...echogardenSttConfig,
       });
     } catch (err) {

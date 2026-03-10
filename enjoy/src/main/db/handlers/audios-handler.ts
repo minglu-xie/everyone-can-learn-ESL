@@ -5,6 +5,8 @@ import downloader from "@main/downloader";
 import log from "@main/logger";
 import { t } from "i18next";
 import youtubedr from "@main/youtubedr";
+import ytdlp from "@main/ytdlp";
+import fs from "fs-extra";
 import { pathToEnjoyUrl } from "@/main/utils";
 
 const logger = log.scope("db/handlers/audios-handler");
@@ -75,9 +77,18 @@ class AudiosHandler {
     logger.info("Creating audio...", { uri, params });
     let file = uri;
     let source;
+    let subtitlePath: string | null = null;
     if (uri.startsWith("http")) {
       if (youtubedr.validateYtURL(uri)) {
         file = await youtubedr.autoDownload(uri);
+      } else if (ytdlp.validateURL(uri)) {
+        const result = await ytdlp.download(uri, {
+          type: "audio",
+          webContents: event.sender,
+        });
+        file = result.mediaPath;
+        subtitlePath = result.subtitlePath;
+        if (!params.name) params.name = result.title;
       } else {
         file = await downloader.download(uri, {
           webContents: event.sender,
@@ -95,8 +106,14 @@ class AudiosHandler {
         compressing: params.compressing,
       });
 
-      // create transcription if originalText is provided
-      const { originalText } = params;
+      // Seed transcription with downloaded subtitle content or provided originalText
+      let { originalText } = params;
+      if (!originalText && subtitlePath && fs.existsSync(subtitlePath)) {
+        let rawSub = fs.readFileSync(subtitlePath, "utf-8");
+        // Clean VTT content (strip SVT STYLE blocks, HTML tags, position metadata)
+        originalText = ytdlp.cleanVttContent(rawSub);
+        logger.info(`Imported subtitle from ${subtitlePath}`);
+      }
       if (originalText) {
         await Transcription.create({
           targetType: "Audio",

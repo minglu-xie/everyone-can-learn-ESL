@@ -146,18 +146,43 @@ export const AISettingsProvider = ({
         }
       }
 
+      // Use a sensible default prompt for Swedish to reduce hallucinations on music intros
+      const defaultPrompt = learningLanguage?.match(/sv/)
+        ? "Hej och välkommen."
+        : "";
+
       config = {
-        engine: "whisper",
+        engine: "whisper.cpp",
+        whisperServerUrl: "http://localhost:8000",
         whisper: {
           model,
           temperature: 0.2,
-          prompt: "",
+          prompt: defaultPrompt,
           encoderProvider: "cpu",
           decoderProvider: "cpu",
         },
+        whisperCpp: {
+          model,
+          temperature: 0.1,
+          prompt: defaultPrompt,
+          enableGPU: true,
+        },
+        maxSegmentLength: 20,
       };
       EnjoyApp.userSettings.set(UserSettingKeyEnum.ECHOGARDEN, config);
     }
+
+    // Ensure whisperCpp config exists (migration for older configs)
+    if (config && !config.whisperCpp && config.whisper) {
+      config.whisperCpp = {
+        model: config.whisper.model || "tiny",
+        temperature: config.whisper.temperature || 0.1,
+        prompt: config.whisper.prompt || "",
+        enableGPU: true,
+      };
+      EnjoyApp.userSettings.set(UserSettingKeyEnum.ECHOGARDEN, config);
+    }
+
     setEchogardenSttConfig(config);
   };
 

@@ -275,6 +275,7 @@ type TranscribeResultType = {
 
 type EchogardenSttConfigType = {
   engine: "whisper" | "whisper.cpp";
+  whisperServerUrl?: string;
   whisper: {
     model: string;
     temperature?: number;
@@ -288,4 +289,5 @@ type EchogardenSttConfigType = {
     prompt?: string;
     enableGPU?: boolean;
   };
+  maxSegmentLength?: number;
 };

@@ -47,15 +47,20 @@ export const AiLookupResult = (props: {
   };
 
   const fetchCachedLookup = async () => {
-    const remoteLookup = await webApi.lookup({
-      word,
-      context,
-      sourceId,
-      sourceType,
-    });
-    if (remoteLookup?.meaning) {
-      setResult(remoteLookup);
-      return;
+    // Try backend first; skip silently when not logged in
+    try {
+      const remoteLookup = await webApi.lookup({
+        word,
+        context,
+        sourceId,
+        sourceType,
+      });
+      if (remoteLookup?.meaning) {
+        setResult(remoteLookup);
+        return;
+      }
+    } catch {
+      // Not logged in or backend unavailable — fall through to local cache
     }
 
     const cached = await EnjoyApp.cacheObjects.get(

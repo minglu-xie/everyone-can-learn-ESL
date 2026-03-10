@@ -5,6 +5,8 @@ import downloader from "@main/downloader";
 import log from "@main/logger";
 import { t } from "i18next";
 import youtubedr from "@main/youtubedr";
+import ytdlp from "@main/ytdlp";
+import fs from "fs-extra";
 import { pathToEnjoyUrl } from "@main/utils";
 
 const logger = log.scope("db/handlers/videos-handler");
@@ -74,10 +76,19 @@ class VideosHandler {
     logger.info("Creating video...", { uri, params });
     let file = uri;
     let source;
+    let subtitlePath: string | null = null;
     if (uri.startsWith("http")) {
       try {
         if (youtubedr.validateYtURL(uri)) {
           file = await youtubedr.autoDownload(uri);
+        } else if (ytdlp.validateURL(uri)) {
+          const result = await ytdlp.download(uri, {
+            type: "video",
+            webContents: event.sender,
+          });
+          file = result.mediaPath;
+          subtitlePath = result.subtitlePath;
+          if (!params.name) params.name = result.title;
         } else {
           file = await downloader.download(uri, {
             webContents: event.sender,
@@ -95,7 +106,18 @@ class VideosHandler {
       source,
       ...params,
     })
-      .then((video) => {
+      .then(async (video) => {
+        // Seed transcription with downloaded subtitle content
+        if (subtitlePath && fs.existsSync(subtitlePath)) {
+          const subtitleContent = fs.readFileSync(subtitlePath, "utf-8");
+          await Transcription.create({
+            targetType: "Video",
+            targetId: video.id,
+            targetMd5: video.md5,
+            result: { originalText: subtitleContent },
+          });
+          logger.info(`Imported subtitle from ${subtitlePath}`);
+        }
         return video.toJSON();
       })
       .catch((err) => {

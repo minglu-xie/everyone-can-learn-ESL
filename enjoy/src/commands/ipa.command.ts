@@ -1,6 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { z } from "zod";
 import { jsonCommand } from "./json.command";
+import { LANGUAGES } from "@/constants";
 
 export const ipaCommand = async (
   text: string,
@@ -9,7 +10,8 @@ export const ipaCommand = async (
     modelName?: string;
     temperature?: number;
     baseUrl?: string;
-  }
+  },
+  learningLanguage: string = "en-US"
 ): Promise<{ words?: { word?: string; ipa?: string }[] }> => {
   if (!text) throw new Error("Text is required");
 
@@ -22,11 +24,14 @@ export const ipaCommand = async (
     ),
   });
 
+  const langName =
+    LANGUAGES.find((l) => l.code === learningLanguage)?.name || "English";
+
   const prompt = await ChatPromptTemplate.fromMessages([
     ["system", SYSTEM_PROMPT],
     ["human", "{text}"],
   ]).format({
-    learning_language: "English",
+    learning_language: langName,
     text,
   });
 

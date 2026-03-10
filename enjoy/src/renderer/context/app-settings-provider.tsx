@@ -336,8 +336,11 @@ export const AppSettingsProvider = ({
         const profile = await EnjoyApp.userSettings.get(
           UserSettingKeyEnum.PROFILE
         );
-        setUser(profile);
-        EnjoyApp.appSettings.setUser({ id: profile.id, name: profile.name });
+        if (profile) {
+          setUser(profile);
+          EnjoyApp.appSettings.setUser({ id: profile.id, name: profile.name });
+        }
+        // If no profile found (e.g. offline bypass), keep the current user object
       }
     });
     return () => {

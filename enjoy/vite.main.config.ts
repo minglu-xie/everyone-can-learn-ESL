@@ -23,6 +23,12 @@ export default defineConfig((env) => {
       dest: "lib/youtubedr",
     },
     {
+      src: `lib/yt-dlp/${
+        process.env.PACKAGE_OS_ARCH || os.arch()
+      }/${os.platform()}/*`,
+      dest: "lib/yt-dlp",
+    },
+    {
       src: "lib/dictionaries/*",
       dest: "lib/dictionaries",
     },
