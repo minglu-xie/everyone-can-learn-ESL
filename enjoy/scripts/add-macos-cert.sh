@@ -3,8 +3,13 @@
 KEY_CHAIN=build.keychain
 CERTIFICATE_P12=certificate.p12
 
+if [ -z "$MACOS_CERTIFICATE_APPLICATION_BASE64" ]; then
+  echo "No macOS certificate provided. Skipping certificate import."
+  exit 0
+fi
+
 # Recreate the certificate from the secure environment variable
-echo $MACOS_CERTIFICATE_APPLICATION_BASE64 | base64 --decode > $CERTIFICATE_P12
+echo "$MACOS_CERTIFICATE_APPLICATION_BASE64" | base64 --decode > $CERTIFICATE_P12
 
 #create a keychain
 security create-keychain -p actions $KEY_CHAIN

@@ -139,8 +139,8 @@ if (process.env.GITHUB_TOKEN) {
       name: "@electron-forge/publisher-github",
       config: {
         repository: {
-          owner: "ZuodaoTech",
-          name: "everyone-can-use-english",
+          owner: process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[0] : "ZuodaoTech",
+          name: process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : "everyone-can-use-english",
         },
         generateReleaseNotes: true,
         draft: true,
