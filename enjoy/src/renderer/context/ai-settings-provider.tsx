@@ -10,6 +10,11 @@ import log from "electron-log/renderer";
 
 const logger = log.scope("ai-settings-provider.tsx");
 
+type AzureSpeechConfigType = {
+  subscriptionKey?: string;
+  region?: string;
+};
+
 type AISettingsProviderState = {
   sttEngine?: SttEngineOptionEnum;
   setSttEngine?: (name: string) => Promise<void>;
@@ -23,6 +28,8 @@ type AISettingsProviderState = {
   setTtsConfig?: (config: TtsConfigType) => Promise<void>;
   echogardenSttConfig?: EchogardenSttConfigType;
   setEchogardenSttConfig?: (config: EchogardenSttConfigType) => Promise<void>;
+  azureSpeech?: AzureSpeechConfigType;
+  setAzureSpeech?: (config: AzureSpeechConfigType) => void;
 };
 
 const initialState: AISettingsProviderState = {};
@@ -54,6 +61,7 @@ export const AISettingsProvider = ({
     },
   });
   const [openai, setOpenai] = useState<LlmProviderType>(null);
+  const [azureSpeech, setAzureSpeech] = useState<AzureSpeechConfigType>(null);
 
   const refreshGptProviders = async () => {
     let providers = GPT_PROVIDERS;
@@ -230,6 +238,13 @@ export const AISettingsProvider = ({
       setOpenai(Object.assign({ name: "openai" }, _openai));
     }
 
+    const _azureSpeech = await EnjoyApp.userSettings.get(
+      UserSettingKeyEnum.AZURE_SPEECH
+    );
+    if (_azureSpeech) {
+      setAzureSpeech(_azureSpeech);
+    }
+
     const _gptEngine = await EnjoyApp.userSettings.get(
       UserSettingKeyEnum.GPT_ENGINE
     );
@@ -270,6 +285,11 @@ export const AISettingsProvider = ({
     setOpenai(Object.assign({ name: "openai" }, config));
   };
 
+  const handleSetAzureSpeech = async (config: AzureSpeechConfigType) => {
+    await EnjoyApp.userSettings.set(UserSettingKeyEnum.AZURE_SPEECH, config);
+    setAzureSpeech(config);
+  };
+
   return (
     <AISettingsProviderContext.Provider
       value={{
@@ -292,6 +312,9 @@ export const AISettingsProvider = ({
               }),
         openai,
         setOpenai: (config: LlmProviderType) => handleSetOpenai(config),
+        azureSpeech,
+        setAzureSpeech: (config: AzureSpeechConfigType) =>
+          handleSetAzureSpeech(config),
         echogardenSttConfig,
         setEchogardenSttConfig: (config: EchogardenSttConfigType) =>
           handleSetEchogardenSttConfig(config),

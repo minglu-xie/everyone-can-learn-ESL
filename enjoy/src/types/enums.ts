@@ -13,6 +13,7 @@ export enum UserSettingKeyEnum {
   DICTS = "dicts",
   RECORDER = "recorder",
   ECHOGARDEN = "echogarden",
+  AZURE_SPEECH = "azure_speech",
 }
 
 export enum SttEngineOptionEnum {

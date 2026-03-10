@@ -1,6 +1,9 @@
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { useContext } from "react";
-import { AppSettingsProviderContext } from "@renderer/context";
+import {
+  AppSettingsProviderContext,
+  AISettingsProviderContext,
+} from "@renderer/context";
 import camelcaseKeys from "camelcase-keys";
 import { map, forEach, sum, filter, cloneDeep } from "lodash";
 import * as Diff from "diff";
@@ -8,6 +11,7 @@ import * as Diff from "diff";
 const THIRTY_SECONDS = 30 * 1000;
 export const usePronunciationAssessments = () => {
   const { webApi, EnjoyApp } = useContext(AppSettingsProviderContext);
+  const { azureSpeech } = useContext(AISettingsProviderContext);
 
   const createAssessment = async (params: {
     language: string;
@@ -29,15 +33,29 @@ export const usePronunciationAssessments = () => {
 
     const { language, reference = recording.referenceText } = params;
 
-    const {
-      id: tokenId,
-      token,
-      region,
-    } = await webApi.generateSpeechToken({
-      purpose: "pronunciation_assessment",
-      targetId,
-      targetType,
-    });
+    // Determine auth mode: custom subscription key vs backend token
+    const useCustomKey =
+      azureSpeech?.subscriptionKey && azureSpeech?.region;
+
+    let token: string;
+    let region: string;
+    let tokenId: number | undefined;
+    let useSubscriptionKey = false;
+
+    if (useCustomKey) {
+      token = azureSpeech.subscriptionKey;
+      region = azureSpeech.region;
+      useSubscriptionKey = true;
+    } else {
+      const speechToken = await webApi.generateSpeechToken({
+        purpose: "pronunciation_assessment",
+        targetId,
+        targetType,
+      });
+      token = speechToken.token;
+      region = speechToken.region;
+      tokenId = speechToken.id;
+    }
 
     let result = null;
 
@@ -48,7 +66,7 @@ export const usePronunciationAssessments = () => {
           language,
           reference,
         },
-        { token, region }
+        { token, region, useSubscriptionKey }
       );
     } else {
       result = await continousAssess(
@@ -57,7 +75,7 @@ export const usePronunciationAssessments = () => {
           language,
           reference,
         },
-        { token, region }
+        { token, region, useSubscriptionKey }
       );
     }
 
@@ -96,11 +114,14 @@ export const usePronunciationAssessments = () => {
     options: {
       token: string;
       region: string;
+      useSubscriptionKey?: boolean;
     }
   ): Promise<sdk.PronunciationAssessmentResult> => {
     const { blob, language, reference } = params;
-    const { token, region } = options;
-    const config = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+    const { token, region, useSubscriptionKey = false } = options;
+    const config = useSubscriptionKey
+      ? sdk.SpeechConfig.fromSubscription(token, region)
+      : sdk.SpeechConfig.fromAuthorizationToken(token, region);
     const audioConfig = sdk.AudioConfig.fromWavFileInput(
       new File([blob], "audio.wav")
     );
@@ -164,11 +185,14 @@ export const usePronunciationAssessments = () => {
     options: {
       token: string;
       region: string;
+      useSubscriptionKey?: boolean;
     }
   ): Promise<sdk.PronunciationAssessmentResult> => {
     const { blob, language, reference } = params;
-    const { token, region } = options;
-    const config = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+    const { token, region, useSubscriptionKey = false } = options;
+    const config = useSubscriptionKey
+      ? sdk.SpeechConfig.fromSubscription(token, region)
+      : sdk.SpeechConfig.fromAuthorizationToken(token, region);
     const audioConfig = sdk.AudioConfig.fromWavFileInput(
       new File([blob], "audio.wav")
     );

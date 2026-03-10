@@ -11,7 +11,9 @@ export const useSpeech = () => {
   const { EnjoyApp, webApi, user, apiUrl, learningLanguage } = useContext(
     AppSettingsProviderContext
   );
-  const { openai, ttsConfig } = useContext(AISettingsProviderContext);
+  const { openai, ttsConfig, azureSpeech } = useContext(
+    AISettingsProviderContext
+  );
 
   const tts = async (params: Partial<SpeechType>) => {
     const { configuration } = params;
@@ -90,15 +92,30 @@ export const useSpeech = () => {
 
     if (model !== "azure/speech") return;
 
-    const { id, token, region } = await webApi.generateSpeechToken({
-      purpose: "tts",
-      input: text,
-    });
-    const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+    // Use custom Azure key if available, fallback to backend token
+    const useCustomKey =
+      azureSpeech?.subscriptionKey && azureSpeech?.region;
+
+    let speechConfig: sdk.SpeechConfig;
+    let tokenId: number | undefined;
+
+    if (useCustomKey) {
+      speechConfig = sdk.SpeechConfig.fromSubscription(
+        azureSpeech.subscriptionKey,
+        azureSpeech.region
+      );
+    } else {
+      const { id, token, region } = await webApi.generateSpeechToken({
+        purpose: "tts",
+        input: text,
+      });
+      speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+      tokenId = id;
+    }
+
     speechConfig.speechRecognitionLanguage = learningLanguage;
     speechConfig.speechSynthesisVoiceName = voice;
 
-    // const speechSynthesizer = new sdk.SpeechSynthesizer(speechConfig, sdk.AudioConfig.fromDefaultSpeakerOutput());
     // Do not playback audio when transcribed
     const speechSynthesizer = new sdk.SpeechSynthesizer(speechConfig, null);
 
@@ -109,16 +126,16 @@ export const useSpeech = () => {
           speechSynthesizer.close();
 
           if (result && result.audioData) {
-            webApi.consumeSpeechToken(id);
+            if (tokenId) webApi.consumeSpeechToken(tokenId);
             resolve(result.audioData);
           } else {
-            webApi.revokeSpeechToken(id);
+            if (tokenId) webApi.revokeSpeechToken(tokenId);
             reject(result);
           }
         },
         (error) => {
           speechSynthesizer.close();
-          webApi.revokeSpeechToken(id);
+          if (tokenId) webApi.revokeSpeechToken(tokenId);
           reject(error);
         }
       );

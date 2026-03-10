@@ -6,8 +6,10 @@ const logger = log.scope("AZURE");
 export class AzureSpeechSdk {
   private config: sdk.SpeechConfig;
 
-  constructor(token: string, region: string) {
-    this.config = sdk.SpeechConfig.fromAuthorizationToken(token, region);
+  constructor(tokenOrKey: string, region: string, useSubscriptionKey = false) {
+    this.config = useSubscriptionKey
+      ? sdk.SpeechConfig.fromSubscription(tokenOrKey, region)
+      : sdk.SpeechConfig.fromAuthorizationToken(tokenOrKey, region);
   }
 
   pronunciationAssessment(params: {
