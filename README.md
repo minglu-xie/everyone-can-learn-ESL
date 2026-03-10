@@ -1,43 +1,88 @@
 <div align="center">
-  <img src="./enjoy/assets/icon.png" alt="Clash" width="128" />
+  <img src="./enjoy/assets/icon.png" alt="Enjoy" width="128" />
 </div>
 
 <h3 align="center">
 AI 是当今世界上最好的外语老师，Enjoy 做 AI 最好的助教。
 </h3>
 
-[![Deploy 1000h website](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/deploy-1000h.yml/badge.svg)](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/deploy-1000h.yml)
-[![Test Enjoy App](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/test-enjoy-app.yml/badge.svg)](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/test-enjoy-app.yml)
-[![Release Enjoy App](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/release-enjoy-app.yml/badge.svg)](https://github.com/ZuodaoTech/everyone-can-use-english/actions/workflows/release-enjoy-app.yml)
-![Latest Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fenjoy.bot%2Fapi%2Fconfig%2Fapp_version&query=%24.version&label=Latest&link=https%3A%2F%2F1000h.org%2Fenjoy-app%2Finstall.html)
-![Recording Duration](https://img.shields.io/endpoint?url=https%3A%2F%2Fenjoy.bot%2Fapi%2Fbadges%2Frecordings)
+> **Notice:** This fork is customized for advanced language learning, adding offline transcription features, Swedish media support, and high-performance SVTPlay compatibility.
 
 ---
 
-## 网页版
+## 🚀 How to Install (For Users)
 
-Enjoy 全新版本已经上线，可访问 [https://enjoy.bot](https://enjoy.bot) 直接使用。
+### Option 1: Download from GitHub Actions (Easiest)
 
-![](./enjoy/snapshots/screenshot-video.png)
-![](./enjoy/snapshots/screenshot-ebook.png)
-![](./enjoy/snapshots/screenshot-flashcard.png)
-![](./enjoy/snapshots/screenshot-course.png)
+You do not need to install anything or run code to get the app!
 
-## 浏览器插件
+1. Go to the **Actions** tab at the top of this GitHub repository.
+2. Click on the **Release Enjoy App** workflow on the left.
+3. Click the **Run workflow** button on the right, select `main`, and run it.
+4. Wait about 15 minutes. Once the run completes, scroll to the bottom of the completed action page.
+5. Under **Artifacts**, download the `.exe` file for Windows or `.dmg` for macOS (use the `arm64` version for newer Apple Silicon Macs, and `x64` for Intel).
 
-Enjoy 浏览器插件已经上线，支持 YouTube 和 Netflix。可访问 [Chrome Web Store](https://chromewebstore.google.com/detail/enjoy-echo/hiijpdndbjfnffibdhajdanjekbnalob) 安装使用。
+### Option 2: Build from Source
 
-![](./enjoy/snapshots/screenshot-youtube.png)
-![](./enjoy/snapshots/screenshot-netflix.png)
+If you are a developer and want to compile the Electron app yourself:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/minglu-xie/everyone-can-learn-ESL.git
+cd everyone-can-learn-ESL
+
+# 2. Install dependencies (requires Node.js 20+)
+yarn install
+
+# 3. Build the application installers
+yarn enjoy:make
+```
+
+The output installers will be placed inside the `enjoy/out/make/` folder.
 
 ---
 
-## 桌面版
+## 🎙️ Highly Recommended: Setup Faster-Whisper
 
-新版桌面版将会是对网页版的套壳和增强，即将发布。
+This application includes a built-in `whisper.cpp` engine that works immediately offline. **However, for the best experience (especially for Swedish and media like SVTPlay that includes intro music), we strongly recommend running the standalone `faster-whisper` server.**
 
+Faster-whisper includes Voice Activity Detection (VAD) which automatically filters out intro jingles and background music that otherwise causes the standard whisper engine to hallucinate.
 
-## 相关阅读
+### How to run the `faster-whisper` server:
+
+1. **Prerequisites**: Ensure you have Python 3.10+ installed.
+2. **Open your terminal** and navigate to the server folder:
+   ```bash
+   cd enjoy/whisper-server
+   ```
+3. **Create a virtual environment and install dependencies**:
+
+   ```bash
+   # On macOS / Linux
+   python3 -m venv venv
+   source venv/bin/activate
+
+   # On Windows
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   ```
+
+4. **Install the requirements**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   _(Note: The first time you run the server, it will download the 1.6GB `large-v3-turbo` model)._
+5. **Start the server**:
+   ```bash
+   python main.py
+   ```
+6. **Connect the App**: Open the Enjoy app, go to **Settings → Speech-to-Text → Whisper Server URL**, and type in `http://localhost:8000`.
+
+That's it! As long as that Python terminal is running in the background, the app will automatically route all heavy speech transcription through it for the highest quality results. If you close the terminal, the app will gracefully fall back to the built-in local fallback engine.
+
+---
+
+## 📖 Additional Resources
 
 ### 一千小时（2024）
 
