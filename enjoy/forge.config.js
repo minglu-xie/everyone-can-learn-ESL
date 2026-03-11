@@ -31,15 +31,9 @@ const config = {
     {
       name: "@electron-forge/maker-zip",
       platforms: ["darwin", "linux"],
-      config: (arch) => ({
-        macUpdateManifestBaseUrl: `https://dl.enjoy.bot/app/darwin/${arch}`,
-      }),
     },
     {
       name: "@electron-forge/maker-squirrel",
-      config: (arch) => ({
-        remoteReleases: `https://dl.enjoy.bot/app/win32/${arch}`,
-      }),
     },
     {
       name: "@electron-forge/maker-deb",
