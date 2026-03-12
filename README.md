@@ -52,11 +52,15 @@ Faster-whisper includes Voice Activity Detection (VAD) which automatically filte
 ### How to run the `faster-whisper` server:
 
 1. **Prerequisites**: Ensure you have Python 3.10+ installed.
-2. **Open your terminal** and navigate to the server folder:
+2. **Download the Server Code**: Since you downloaded the app directly, you still need to download the server files:
+   - Go to this repository's main page.
+   - Click the green **Code** button and select **Download ZIP**.
+   - Unzip the file to your computer.
+3. **Open your terminal** and navigate to the extracted server folder:
    ```bash
-   cd enjoy/whisper-server
+   cd path/to/everyone-can-learn-ESL/enjoy/whisper-server
    ```
-3. **Create a virtual environment and install dependencies**:
+4. **Create a virtual environment and install dependencies**:
 
    ```bash
    # On macOS / Linux
@@ -68,16 +72,16 @@ Faster-whisper includes Voice Activity Detection (VAD) which automatically filte
    .\venv\Scripts\Activate.ps1
    ```
 
-4. **Install the requirements**:
+5. **Install the requirements**:
    ```bash
    pip install -r requirements.txt
    ```
    _(Note: The first time you run the server, it will download the 1.6GB `large-v3-turbo` model)._
-5. **Start the server**:
+6. **Start the server**:
    ```bash
    python main.py
    ```
-6. **Connect the App**: Open the Enjoy app, go to **Settings → Speech-to-Text → Whisper Server URL**, and type in `http://localhost:8000`.
+7. **Connect the App**: Open the Enjoy app, go to **Settings → Speech-to-Text → Whisper Server URL**, and type in `http://localhost:8000`.
 
 That's it! As long as that Python terminal is running in the background, the app will automatically route all heavy speech transcription through it for the highest quality results. If you close the terminal, the app will gracefully fall back to the built-in local fallback engine.
 
