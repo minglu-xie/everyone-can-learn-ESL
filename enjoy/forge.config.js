@@ -34,6 +34,9 @@ const config = {
     },
     {
       name: "@electron-forge/maker-squirrel",
+      config: {
+        noDelta: true
+      }
     },
     {
       name: "@electron-forge/maker-deb",
