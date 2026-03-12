@@ -12,15 +12,16 @@ AI 是当今世界上最好的外语老师，Enjoy 做 AI 最好的助教。
 
 ## 🚀 How to Install (For Users)
 
-### Option 1: Download from GitHub Actions (Easiest)
+### Option 1: Download from Releases (Easiest)
 
 You do not need to install anything or run code to get the app!
 
-1. Go to the **Actions** tab at the top of this GitHub repository.
-2. Click on the **Release Enjoy App** workflow on the left.
-3. Click the **Run workflow** button on the right, select `main`, and run it.
-4. Wait about 15 minutes. Once the run completes, scroll to the bottom of the completed action page.
-5. Under **Artifacts**, download the `.exe` file for Windows or `.dmg` for macOS (use the `arm64` version for newer Apple Silicon Macs, and `x64` for Intel).
+1. Go to the **Releases** section on the right side of this GitHub repository page (look for the "latest" tag).
+2. Under the **Assets** dropdown at the bottom of the release, simply download the installer for your computer:
+   - **Windows**: Download `Enjoy-0.7.9.Setup.exe`
+   - **Mac (M1/M2/M3)**: Download `Enjoy-0.7.9-arm64.dmg`
+   - **Mac (Intel)**: Download `Enjoy-0.7.9-x64.dmg`
+3. Run the installer and you are ready to go!
 
 ### Option 2: Build from Source
 
