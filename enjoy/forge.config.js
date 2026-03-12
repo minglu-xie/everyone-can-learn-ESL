@@ -8,7 +8,7 @@ const config = {
   packagerConfig: {
     asar: {
       // Binary files won't work in asar, so we need to unpack them
-      unpackDir: `{.vite/build/lib,.vite/build/samples,node_modules/ffmpeg-static,node_modules/@andrkrn/ffprobe-static,node_modules/onnxruntime-node/bin/napi-v3/${os.platform()}/${os.arch()},lib/dictionaries}`,
+      unpackDir: `{.vite/build/lib,.vite/build/samples,node_modules/ffmpeg-static,node_modules/@andrkrn/ffprobe-static,node_modules/onnxruntime-node/bin/napi-v3/${os.platform()}/*,lib/dictionaries}`,
     },
     icon: "./assets/icon",
     name: "Enjoy",
