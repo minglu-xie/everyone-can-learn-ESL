@@ -41,6 +41,7 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           npm_config_arch: ${{ matrix.arch }}
+          PACKAGE_OS_ARCH: ${{ matrix.arch }}
         run: |
           cd enjoy
           yarn run cross-env NODE_OPTIONS='--max-old-space-size=8192' rimraf .vite
