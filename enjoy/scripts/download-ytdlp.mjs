@@ -4,7 +4,7 @@ import axios from "axios";
 import progress from "progress";
 
 // yt-dlp release version to download
-const YTDLP_VERSION = "2024.12.23";
+const YTDLP_VERSION = "2026.03.13";
 const YTDLP_BASE_URL = `https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}`;
 
 const platform = process.platform;
@@ -20,7 +20,10 @@ if (platform === "darwin") {
   downloadUrl = `${YTDLP_BASE_URL}/yt-dlp_macos`;
 } else if (platform === "win32") {
   binaryName = "yt-dlp.exe";
-  downloadUrl = `${YTDLP_BASE_URL}/yt-dlp.exe`;
+  downloadUrl = arch === "arm64" ? `${YTDLP_BASE_URL}/yt-dlp_arm64.exe` : `${YTDLP_BASE_URL}/yt-dlp.exe`;
+} else if (platform === "linux") {
+  binaryName = "yt-dlp";
+  downloadUrl = arch === "arm64" ? `${YTDLP_BASE_URL}/yt-dlp_linux_aarch64` : `${YTDLP_BASE_URL}/yt-dlp_linux`;
 } else {
   console.info(chalk.yellow(`⚠️ yt-dlp download skipped: unsupported platform "${platform}"`));
   process.exit(0);
@@ -84,8 +87,8 @@ const download = async (url, dest) => {
           .pipe(fs.createWriteStream(dest))
           .on("close", () => {
             console.info(chalk.green(`✅ yt-dlp downloaded to ${dest}`));
-            // Make executable on macOS
-            if (platform === "darwin") {
+            // Make executable on macOS and linux
+            if (platform === "darwin" || platform === "linux") {
               fs.chmodSync(dest, 0o755);
               console.info(chalk.green(`✅ Made executable`));
             }
