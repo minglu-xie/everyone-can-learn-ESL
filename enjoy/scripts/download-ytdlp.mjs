@@ -8,7 +8,8 @@ const YTDLP_VERSION = "2024.12.23";
 const YTDLP_BASE_URL = `https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}`;
 
 const platform = process.platform;
-const dir = path.join(process.cwd(), "lib/yt-dlp");
+const arch = process.env.PACKAGE_OS_ARCH || process.arch;
+const dir = path.join(process.cwd(), "lib/yt-dlp", arch, platform);
 
 // Determine binary name and download URL based on platform
 let binaryName;
