@@ -12,11 +12,9 @@ jobs:
         include:
           - os: macos-15
             arch: arm64
-          - os: macos-15
+          - os: macos-13
             arch: x64
           - os: windows-latest
-            arch: x64
-          - os: ubuntu-latest
             arch: x64
     steps:
       - uses: actions/checkout@v4
@@ -51,8 +49,6 @@ jobs:
         with:
           name: Enjoy-${{ runner.os }}-${{ matrix.arch }}-build-${{ github.ref_name }}
           path: |
-            enjoy/out/make/**/*.deb
-            enjoy/out/make/**/*.rpm
             enjoy/out/make/**/*.exe
             enjoy/out/make/**/*.dmg
 
@@ -61,8 +57,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           files: |
-            enjoy/out/make/**/*.deb
-            enjoy/out/make/**/*.rpm
             enjoy/out/make/**/*.exe
             enjoy/out/make/**/*.dmg
           tag_name: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
