@@ -3,7 +3,7 @@
   "private": true,
   "name": "enjoy",
   "productName": "Enjoy",
-  "version": "0.7.9",
+  "version": "0.8.0",
   "description": "Enjoy desktop app",
   "main": ".vite/build/main.js",
   "types": "./src/types.d.ts",
@@ -23,7 +23,7 @@
     "download-dictionaries": "zx ./scripts/download-dictionaries.mjs",
     "download-ytdlp": "zx ./scripts/download-ytdlp.mjs",
     "download": "yarn run download-dictionaries && yarn run download-ytdlp",
-    "sourcemap": "bugsnag-source-maps upload-node --directory .vite/build --app-version 0.7.9"
+    "sourcemap": "bugsnag-source-maps upload-node --directory .vite/build --app-version 0.8.0"
   },
   "keywords": [],
   "author": {
